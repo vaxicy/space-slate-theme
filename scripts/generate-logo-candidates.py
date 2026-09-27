@@ -11,8 +11,10 @@ Outputs (relative paths only - avoids the Windows non-ASCII path OSError in PIL)
 """
 from __future__ import annotations
 
+import base64
 import math
 import os
+import sys
 
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
@@ -301,6 +303,30 @@ def contact_sheet(items, bg, out_path):
     sheet.save(out_path)
 
 
+INLINE_OUT = f"{OUT_DIR}/inline-strip.png"
+
+
+def inline_strip(items, bg, out_path, cell=72, gap=12, pad=14, label_h=22, colors=48):
+    """Tiny single-row sheet, small enough to inline into chat as a data URI.
+    Palette quantization (48 colors) keeps the file ~6 KB instead of ~20 KB."""
+    n = len(items)
+    W = pad * 2 + n * cell + (n - 1) * gap
+    H = pad * 2 + cell + label_h
+    sheet = Image.new("RGB", (W, H), bg)
+    d = ImageDraw.Draw(sheet)
+    f = load_font(14)
+    for i, (slug, img) in enumerate(items):
+        x = pad + i * (cell + gap)
+        thumb = img.resize((cell, cell), Image.LANCZOS)
+        sheet.paste(thumb, (x, pad), thumb)
+        d.text((x, pad + cell + 3), f"{i + 1:02d} {slug.split('-')[1]}", font=f,
+               fill=(58, 56, 68))
+    if colors:
+        sheet = sheet.quantize(colors=colors, method=Image.Quantize.MEDIANCUT)
+    sheet.save(out_path, optimize=True)
+    return out_path
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     items = []
@@ -325,6 +351,14 @@ def main():
         chosen.save(ICON_OUT)
         print(f"extension icon -> {ICON_OUT}  (from {SELECTED})")
 
+    inline_strip(items, (240, 238, 252), INLINE_OUT)
+    print(f"inline strip -> {INLINE_OUT} "
+          f"({os.path.getsize(INLINE_OUT) / 1024:.1f} KB)")
+
 
 if __name__ == "__main__":
     main()
+    if "--data-uri" in sys.argv:
+        # print the inline sheet as a data URI so it can be pasted into chat
+        with open(INLINE_OUT, "rb") as fh:
+            print("data:image/png;base64," + base64.b64encode(fh.read()).decode())
