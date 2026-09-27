@@ -1,9 +1,9 @@
 {
   "name": "space-slate-theme",
   "displayName": "Space Slate Theme",
-  "description": "Space Slate Theme color theme for VS Code, generated with ThemeBake.",
+  "description": "A calm slate gray VS Code theme with a lavender-tinted light variant and a deep indigo dark variant.",
   "version": "1.0.0",
-  "publisher": "themebake",
+  "publisher": "lilinhuang",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -20,7 +20,14 @@
     "color-theme",
     "vscode-theme",
     "light-theme",
-    "dark-theme"
+    "dark-theme",
+    "slate",
+    "gray",
+    "space",
+    "lavender",
+    "muted",
+    "calm",
+    "minimal"
   ],
   "contributes": {
     "themes": [
@@ -35,6 +42,10 @@
         "path": "./themes/space-slate-theme-dark-color-theme.json"
       }
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vaxicy/space-slate-theme"
   },
   "license": "MIT"
 }
