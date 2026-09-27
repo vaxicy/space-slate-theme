@@ -1,0 +1,40 @@
+{
+  "name": "space-slate-theme",
+  "displayName": "Space Slate Theme",
+  "description": "Space Slate Theme color theme for VS Code, generated with ThemeBake.",
+  "version": "1.0.0",
+  "publisher": "themebake",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "icon": "assets/icon.png",
+  "galleryBanner": {
+    "color": "#E4E2EF",
+    "theme": "light"
+  },
+  "keywords": [
+    "theme",
+    "color-theme",
+    "vscode-theme",
+    "light-theme",
+    "dark-theme"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Space Slate Theme Light",
+        "uiTheme": "vs",
+        "path": "./themes/space-slate-theme-light-color-theme.json"
+      },
+      {
+        "label": "Space Slate Theme Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/space-slate-theme-dark-color-theme.json"
+      }
+    ]
+  },
+  "license": "MIT"
+}

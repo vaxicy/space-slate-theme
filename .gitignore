@@ -1,0 +1,3 @@
+# local / sensitive files - never commit
+.codebuddy/
+*.vsix

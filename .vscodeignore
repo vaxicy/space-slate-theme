@@ -1,0 +1,6 @@
+# local / sensitive files - never ship inside the .vsix
+.codebuddy/
+scripts/
+assets/logo-candidates/
+.vscodeignore
+.gitignore
