@@ -36,6 +36,9 @@ OUT_DIR = os.path.join(BASE, "store-assets", "screenshots", "en")
 TMP_DIR = os.path.join(BASE, ".tmp")
 
 WIDTH, HEIGHT = 1440, 900
+# Windows still draws a 1px dark frame line inside the visible frame bounds;
+# crop a few extra physical pixels so no dark outline survives the downscale.
+EXTRA_CROP = 3
 PUBLISHER = "lilinhuang"
 NAME = "space-slate-theme"
 VERSION = "1.0.0"
@@ -48,6 +51,9 @@ VARIANTS = [
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
+
+DWMWA_EXTENDED_FRAME_BOUNDS = 9
 
 SW_RESTORE = 9
 SWP_NOZORDER = 0x0004
@@ -106,6 +112,9 @@ def declare_signatures():
     gdi32.GetDIBits.restype = ctypes.c_int
     gdi32.DeleteObject.argtypes = [wt.HGDIOBJ]
     gdi32.DeleteDC.argtypes = [wt.HDC]
+    dwmapi.DwmGetWindowAttribute.argtypes = [wt.HWND, wt.DWORD, ctypes.c_void_p,
+                                             wt.DWORD]
+    dwmapi.DwmGetWindowAttribute.restype = ctypes.c_long
 
 
 def make_dpi_aware():
@@ -162,6 +171,24 @@ def resize_window(hwnd, width, height):
     user32.ShowWindow(hwnd, SW_RESTORE)
     user32.SetWindowPos(hwnd, None, 0, 0, int(width), int(height),
                         SWP_NOZORDER | SWP_NOACTIVATE)
+
+
+def frame_insets(hwnd):
+    """Thickness of the invisible resize frame DWM paints as #202020.
+
+    GetWindowRect includes that frame; DWMWA_EXTENDED_FRAME_BOUNDS excludes it,
+    so the difference tells us how many pixels to crop off each side.
+    """
+    win = wt.RECT()
+    frame = wt.RECT()
+    if not user32.GetWindowRect(hwnd, ctypes.byref(win)):
+        return (0, 0, 0, 0)
+    hr = dwmapi.DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS,
+                                      ctypes.byref(frame), ctypes.sizeof(frame))
+    if hr != 0:
+        return (0, 0, 0, 0)
+    return (max(0, frame.left - win.left), max(0, frame.top - win.top),
+            max(0, win.right - frame.right), max(0, win.bottom - frame.bottom))
 
 
 def print_window(hwnd):
@@ -309,7 +336,11 @@ def capture(variant, theme_label, marker):
     print(f"[{variant}] window: {title!r}")
 
     scale = (user32.GetDpiForWindow(hwnd) or 96) / 96.0
-    resize_window(hwnd, WIDTH * scale, HEIGHT * scale)
+    insets = frame_insets(hwnd)
+    print(f"[{variant}] dpi {scale:.2f}, frame insets {insets}")
+    # size the window so that the *visible* frame is exactly WIDTH x HEIGHT logical
+    resize_window(hwnd, WIDTH * scale + insets[0] + insets[2],
+                  HEIGHT * scale + insets[1] + insets[3])
     time.sleep(4.0)
 
     img = print_window(hwnd)
@@ -317,6 +348,14 @@ def capture(variant, theme_label, marker):
     if looks_empty(img):
         print(f"[{variant}] empty frame, falling back to screen grab")
         img = screen_grab(hwnd)
+    if any(insets):
+        left, top, right, bottom = insets
+        img = img.crop((left, top, img.width - right, img.height - bottom))
+        print(f"[{variant}] cropped the invisible frame -> {img.size}")
+    if EXTRA_CROP:
+        img = img.crop((EXTRA_CROP, EXTRA_CROP,
+                        img.width - EXTRA_CROP, img.height - EXTRA_CROP))
+        print(f"[{variant}] cropped the 1px OS frame line -> {img.size}")
     if img.size != (WIDTH, HEIGHT):
         img = img.resize((WIDTH, HEIGHT), Image.LANCZOS)
 
